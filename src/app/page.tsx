@@ -1,65 +1,101 @@
-import Image from "next/image";
+import Link from 'next/link';
 
-export default function Home() {
+export default function HomePage() {
+  const features = [
+    { icon: '💼', title: 'Real Job Listings', desc: 'Live scraped data from FreeJobAlert, IndGovtJobs, MySarkariNaukri', color: '#4f7df5' },
+    { icon: '🏛️', title: 'Government Schemes', desc: 'Scholarships, grants, and welfare schemes from myScheme.gov.in', color: '#8b5cf6' },
+    { icon: '🎓', title: 'Internships', desc: '8000+ live internships scraped from Internshala', color: '#10b981' },
+    { icon: '🏆', title: 'Hackathons', desc: 'Live hackathons from Devfolio with themes, dates & registration', color: '#f59e0b' },
+    { icon: '🌍', title: 'Open Source Programs', desc: 'GSoC, LFX Mentorship, Outreachy, MLH Fellowship & more', color: '#ec4899' },
+    { icon: '🤖', title: 'Gemini AI Powered', desc: 'AI career roadmaps, eligibility analysis, and career advisor chatbot', color: '#6366f1' },
+  ];
+
+  const stats = [
+    { number: '7', label: 'Data Sources' },
+    { number: '100+', label: 'Real Listings' },
+    { number: 'AI', label: 'Powered' },
+    { number: '24/7', label: 'Updated' },
+  ];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div>
+      {/* Hero */}
+      <section style={{ padding: '80px 24px 60px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -100, left: '50%', transform: 'translateX(-50%)', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,125,245,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'relative', maxWidth: 800, margin: '0 auto' }}>
+          <div style={{ display: 'inline-block', marginBottom: 16, padding: '6px 16px', borderRadius: 20, background: 'rgba(79,125,245,0.15)', color: '#6d9bff', fontSize: '0.8rem', fontWeight: 600 }}>
+            🚀 Powered by Gemini 2.5 Flash AI
+          </div>
+          <h1 style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 900, lineHeight: 1.1, marginBottom: 20 }}>
+            Your <span className="gradient-text">AI Career Companion</span> for the Indian Market
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p style={{ fontSize: '1.15rem', color: 'var(--text-secondary)', maxWidth: 600, margin: '0 auto 32px', lineHeight: 1.7 }}>
+            Real jobs, internships, hackathons & government schemes — scraped live from 7 trusted Indian portals. AI-powered personalized career roadmaps and eligibility analysis.
           </p>
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link href="/register" className="btn-gradient" style={{ padding: '14px 32px', fontSize: '1rem' }}>
+              Get Started Free →
+            </Link>
+            <Link href="/jobs" className="btn-outline" style={{ padding: '14px 32px', fontSize: '1rem' }}>
+              Browse Jobs
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* Stats */}
+      <section style={{ padding: '0 24px 60px' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          {stats.map((s, i) => (
+            <div key={i} style={{ textAlign: 'center', padding: 20 }} className="glass-card">
+              <div className="gradient-text" style={{ fontSize: '2rem', fontWeight: 900 }}>{s.number}</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</div>
+            </div>
+          ))}
         </div>
-      </main>
+      </section>
+
+      {/* Features */}
+      <section style={{ padding: '40px 24px 80px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <h2 style={{ textAlign: 'center', fontSize: '2rem', fontWeight: 800, marginBottom: 12 }}>Everything You Need</h2>
+          <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: 48, fontSize: '1.05rem' }}>Real data. Real opportunities. AI-powered insights.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
+            {features.map((f, i) => (
+              <div key={i} className="glass-card" style={{ padding: 28 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: `${f.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, marginBottom: 16 }}>{f.icon}</div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 8 }}>{f.title}</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Data Sources */}
+      <section style={{ padding: '40px 24px 80px', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 24 }}>Trusted Data Sources</h2>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12, maxWidth: 800, margin: '0 auto' }}>
+          {['FreeJobAlert.com', 'IndGovtJobs.in', 'MySarkariNaukri.com', 'myScheme.gov.in', 'Internshala.com', 'Devfolio.co', 'Google Summer of Code'].map(src => (
+            <span key={src} style={{ padding: '8px 20px', borderRadius: 10, background: 'rgba(79,125,245,0.08)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 500 }}>
+              {src}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section style={{ padding: '60px 24px', textAlign: 'center' }}>
+        <div className="glass-card" style={{ maxWidth: 700, margin: '0 auto', padding: '48px 32px', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 12 }}>Ready to Find Your Path?</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 28, fontSize: '1rem' }}>
+            Create your profile and get AI-personalized career recommendations in seconds.
+          </p>
+          <Link href="/register" className="btn-gradient" style={{ padding: '14px 36px', fontSize: '1.05rem' }}>
+            Join GrowthGrid — It&apos;s Free →
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
