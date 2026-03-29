@@ -69,8 +69,10 @@ export default function Navbar() {
         .opp-btn:hover { color: #fff; background: rgba(255,255,255,0.07); }
 
         .dropdown {
-          position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
-          min-width: 180px;
+          position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+          min-width: 180px; padding-top: 8px;
+        }
+        .dropdown-inner {
           background: rgba(15,15,35,0.95); border: 1px solid rgba(255,255,255,0.1);
           border-radius: 12px; padding: 6px; box-shadow: 0 20px 60px rgba(0,0,0,0.6);
           backdrop-filter: blur(20px);
@@ -160,12 +162,14 @@ export default function Navbar() {
               </button>
               {opportunitiesOpen && (
                 <div className="dropdown">
-                  {opportunities.map(o => (
-                    <Link key={o.href} href={o.href} className="dropdown-link"
-                      style={{ color: isActive(o.href) ? '#6d9bff' : undefined }}>
-                      {o.label}
-                    </Link>
-                  ))}
+                  <div className="dropdown-inner">
+                    {opportunities.map(o => (
+                      <Link key={o.href} href={o.href} className="dropdown-link"
+                        style={{ color: isActive(o.href) ? '#6d9bff' : undefined }}>
+                        {o.label}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
