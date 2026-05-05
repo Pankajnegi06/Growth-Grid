@@ -30,6 +30,8 @@ const sourceLabel: Record<string, { label: string; color: string }> = {
   // Indian portals
   naukri_india:   { label: 'Naukri.com',       color: '#4285f4' },
   shine_india:    { label: 'Shine.com',        color: '#1e88e5' },
+  adzuna_india:   { label: 'Adzuna India',     color: '#3bb143' },
+  india_curated:  { label: 'India Jobs',       color: '#ff9933' },
 };
 
 function formatTimeAgo(dateStr: string | null): string {
@@ -55,8 +57,10 @@ export default function JobsPage() {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [trackingId, setTrackingId] = useState<string | null>(null);
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
+  const [bookmarkingId, setBookmarkingId] = useState<string | null>(null);
 
-  // Fetch user's applied jobs
+  // Fetch user's applied jobs + bookmarks
   useEffect(() => {
     if (session) {
       fetch('/api/applications')
@@ -66,6 +70,15 @@ export default function JobsPage() {
             .filter((a: { opportunityType: string }) => a.opportunityType === 'job')
             .map((a: { opportunityId: string }) => a.opportunityId));
           setAppliedIds(ids);
+        })
+        .catch(() => {});
+      fetch('/api/bookmarks')
+        .then(r => r.json())
+        .then(d => {
+          const ids = new Set<string>((d.bookmarks || [])
+            .filter((b: { type: string }) => b.type === 'job')
+            .map((b: { refId: string }) => b.refId));
+          setBookmarkedIds(ids);
         })
         .catch(() => {});
     }
@@ -118,6 +131,25 @@ export default function JobsPage() {
       } catch { /* silent */ }
     }
     setTrackingId(null);
+  };
+
+  const toggleBookmark = async (jobId: string) => {
+    if (!session) return;
+    setBookmarkingId(jobId);
+    const isBookmarked = bookmarkedIds.has(jobId);
+    try {
+      await fetch('/api/bookmarks', {
+        method: isBookmarked ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'job', refId: jobId }),
+      });
+      setBookmarkedIds(prev => {
+        const next = new Set(prev);
+        isBookmarked ? next.delete(jobId) : next.add(jobId);
+        return next;
+      });
+    } catch { /* silent */ }
+    setBookmarkingId(null);
   };
 
   return (
@@ -199,14 +231,29 @@ export default function JobsPage() {
                 onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(79,125,245,0.35)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = isApplied ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.07)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; }}
               >
-                {/* Applied badge */}
-                {isApplied && (
-                  <span style={{
-                    position: 'absolute', top: 8, right: 8, fontSize: '0.62rem', fontWeight: 700,
-                    padding: '2px 8px', borderRadius: 5,
-                    background: 'rgba(16,185,129,0.15)', color: '#34d399', textTransform: 'uppercase',
-                  }}>✅ Applied</span>
-                )}
+                {/* Bookmark + Applied badges */}
+                <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {isApplied && (
+                    <span style={{
+                      fontSize: '0.62rem', fontWeight: 700,
+                      padding: '2px 8px', borderRadius: 5,
+                      background: 'rgba(16,185,129,0.15)', color: '#34d399', textTransform: 'uppercase',
+                    }}>✅ Applied</span>
+                  )}
+                  {session && (
+                    <button
+                      onClick={() => toggleBookmark(job._id)}
+                      disabled={bookmarkingId === job._id}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem',
+                        opacity: bookmarkingId === job._id ? 0.4 : 1, transition: 'transform 0.2s', padding: 2,
+                      }}
+                      title={bookmarkedIds.has(job._id) ? 'Remove bookmark' : 'Bookmark this job'}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.25)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
+                    >{bookmarkedIds.has(job._id) ? '🔖' : '🏷️'}</button>
+                  )}
+                </div>
 
                 {/* Top row: type badge + source */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

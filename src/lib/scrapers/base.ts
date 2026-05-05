@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import * as cheerio from 'cheerio';
 import https from 'https';
 
@@ -16,12 +16,22 @@ export function getRandomUA() {
 }
 
 export async function fetchPage(url: string): Promise<cheerio.CheerioAPI> {
-  const { data } = await axios.get(url, {
-    headers: { 'User-Agent': getRandomUA(), 'Accept': 'text/html,application/xhtml+xml', 'Accept-Language': 'en-US,en;q=0.9' },
-    timeout: 15000,
-    httpsAgent,
-  });
-  return cheerio.load(data);
+  try {
+    const { data } = await axios.get(url, {
+      headers: { 'User-Agent': getRandomUA(), 'Accept': 'text/html,application/xhtml+xml', 'Accept-Language': 'en-US,en;q=0.9' },
+      timeout: 15000,
+      httpsAgent,
+    });
+    return cheerio.load(data);
+  } catch (error) {
+    // Extract only the meaningful error message, not the full axios config dump
+    if (error instanceof AxiosError) {
+      const status = error.response?.status || 'N/A';
+      const msg = error.message || 'Unknown axios error';
+      throw new Error(`fetchPage(${url}) failed: HTTP ${status} — ${msg}`);
+    }
+    throw error;
+  }
 }
 
 export function delay(ms: number) {

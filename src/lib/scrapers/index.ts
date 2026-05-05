@@ -4,7 +4,7 @@ import Scheme from '@/models/Scheme';
 import Internship from '@/models/Internship';
 import Hackathon from '@/models/Hackathon';
 import OpenSource from '@/models/OpenSource';
-import { scrapeFreeJobAlert, scrapeIndGovtJobs, scrapeMySarkariNaukri, scrapeFreshersworld, scrapeTimesJobs, fetchRemoteOKJobs, fetchJobicyJobs, fetchJSearchJobs, scrapeNaukriIndia, scrapeShineIndia } from './jobs';
+import { scrapeFreeJobAlert, scrapeIndGovtJobs, scrapeMySarkariNaukri, scrapeFreshersworld, scrapeTimesJobs, fetchRemoteOKJobs, fetchJobicyJobs, fetchJSearchJobs, scrapeNaukriIndia, scrapeShineIndia, fetchAdzunaIndiaJobs } from './jobs';
 import { scrapeMyScheme } from './schemes';
 import { scrapeInternshala } from './internships';
 import { scrapeDevfolio } from './hackathons';
@@ -29,7 +29,7 @@ export async function refreshJobs() {
   );
 
   // Run all job sources in parallel for speed
-  const [fjaJobs, igjJobs, msnJobs, remoteJobs, jobicyJobs, fwJobs, tjJobs, jsJobs, nkrJobs, shnJobs] = await Promise.allSettled([
+  const [fjaJobs, igjJobs, msnJobs, remoteJobs, jobicyJobs, fwJobs, tjJobs, jsJobs, nkrJobs, shnJobs, adzJobs] = await Promise.allSettled([
     scrapeFreeJobAlert(),
     scrapeIndGovtJobs(),
     scrapeMySarkariNaukri(),
@@ -40,6 +40,7 @@ export async function refreshJobs() {
     fetchJSearchJobs(),
     scrapeNaukriIndia(),
     scrapeShineIndia(),
+    fetchAdzunaIndiaJobs(),
   ]);
 
   const allJobs = [
@@ -53,6 +54,7 @@ export async function refreshJobs() {
     ...(jsJobs.status === 'fulfilled' ? jsJobs.value : []),
     ...(nkrJobs.status === 'fulfilled' ? nkrJobs.value : []),
     ...(shnJobs.status === 'fulfilled' ? shnJobs.value : []),
+    ...(adzJobs.status === 'fulfilled' ? adzJobs.value : []),
   ];
 
   // Log source counts for debugging
