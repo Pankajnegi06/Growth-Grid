@@ -4,18 +4,28 @@ import Link from 'next/link';
 
 interface Scheme { _id: string; title: string; ministry: string; description: string; eligibility: string; benefits: string; category: string; targetGroup: string; source: string; applicationProcess: string; sourceUrl: string; }
 
+function formatTimeAgo(d: string | null): string {
+  if (!d) return '';
+  const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
+  if (m < 1) return 'Just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
+}
+
 export default function SchemesPage() {
   const [schemes, setSchemes] = useState<Scheme[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   const fetchSchemes = () => {
     setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     if (category) params.set('category', category);
-    fetch(`/api/schemes?${params}`).then(r => r.json()).then(d => { setSchemes(d.schemes || []); setLoading(false); }).catch(() => setLoading(false));
+    fetch(`/api/schemes?${params}&_t=${Date.now()}`).then(r => r.json()).then(d => { setSchemes(d.schemes || []); setLastUpdated(d.lastUpdated || null); setLoading(false); }).catch(() => setLoading(false));
   };
 
   useEffect(() => { fetchSchemes(); }, [category]);
@@ -26,11 +36,15 @@ export default function SchemesPage() {
   return (
     <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px' }}>
       <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: 8 }}>🏛️ Government Schemes</h1>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>Real government schemes, scholarships, and welfare programs for students & job seekers</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+        <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Real government schemes, scholarships, and welfare programs</p>
+        {lastUpdated && <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '3px 10px', borderRadius: 6, background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>🔄 Updated {formatTimeAgo(lastUpdated)}</span>}
+        {loading && <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '3px 10px', borderRadius: 6, background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}>⏳ Refreshing...</span>}
+      </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
         <input className="input-field" style={{ flex: '1 1 250px' }} placeholder="Search schemes..." value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchSchemes()} />
-        <button className="btn-gradient" onClick={fetchSchemes}>Search</button>
+        <button className="btn-gradient" onClick={fetchSchemes} disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>{loading ? '⏳' : 'Search'}</button>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
@@ -60,9 +74,7 @@ export default function SchemesPage() {
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8, lineHeight: 1.5 }}>{s.description.substring(0, 150)}</p>
               {s.benefits && <div style={{ fontSize: '0.8rem', color: '#34d399', marginBottom: 6 }}>💰 {s.benefits.substring(0, 100)}</div>}
               {s.eligibility && <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 12 }}>📋 {s.eligibility.substring(0, 100)}</div>}
-              <a href={s.sourceUrl} target="_blank" rel="noopener noreferrer" className="btn-gradient" style={{ padding: '8px 16px', fontSize: '0.8rem', width: '100%', justifyContent: 'center' }}>
-                Learn More →
-              </a>
+              <a href={s.sourceUrl} target="_blank" rel="noopener noreferrer" className="btn-gradient" style={{ padding: '8px 16px', fontSize: '0.8rem', width: '100%', justifyContent: 'center' }}>Learn More →</a>
             </div>
           ))}
         </div>

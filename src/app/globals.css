@@ -162,3 +162,36 @@ body {
   0%, 100% { box-shadow: 0 0 20px rgba(79, 125, 245, 0.2); }
   50% { box-shadow: 0 0 40px rgba(79, 125, 245, 0.4); }
 }
+
+/* Fade-in-up animation for scroll-to-top */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Stat counter pop animation */
+.stat-counter {
+  animation: statPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes statPop {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Clickable stat card */
+.stat-card-clickable {
+  transition: all 0.3s ease !important;
+}
+.stat-card-clickable:hover {
+  transform: translateY(-6px) !important;
+  box-shadow: 0 16px 48px rgba(79, 125, 245, 0.2) !important;
+}
+
+/* Feature card hover */
+.feature-card-hover {
+  transition: all 0.35s ease !important;
+}
+.feature-card-hover:hover {
+  transform: translateY(-6px) !important;
+  box-shadow: 0 16px 48px rgba(79, 125, 245, 0.15) !important;
+}

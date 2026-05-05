@@ -34,6 +34,8 @@ export default function Navbar() {
     { href: '/internships', label: 'Internships' },
     { href: '/hackathons', label: 'Hackathons' },
     { href: '/opensource', label: 'Open Source' },
+    { href: '/gallery', label: '🖼️ Gallery' },
+    { href: '/archives', label: '📦 Archives' },
   ];
 
   return (

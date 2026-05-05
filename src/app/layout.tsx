@@ -3,6 +3,7 @@ import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export const metadata: Metadata = {
   title: "GrowthGrid - AI Career Platform for Students & Job Seekers",
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Navbar />
           <main style={{ minHeight: 'calc(100vh - 70px)' }}>{children}</main>
           <Footer />
+          <ScrollToTop />
         </AuthProvider>
       </body>
     </html>

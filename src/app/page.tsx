@@ -2,12 +2,12 @@ import Link from 'next/link';
 
 export default function HomePage() {
   const features = [
-    { icon: '💼', title: 'Real Job Listings', desc: 'Live scraped data from FreeJobAlert, IndGovtJobs, MySarkariNaukri', color: '#4f7df5' },
-    { icon: '🏛️', title: 'Government Schemes', desc: 'Scholarships, grants, and welfare schemes from myScheme.gov.in', color: '#8b5cf6' },
-    { icon: '🎓', title: 'Internships', desc: '8000+ live internships scraped from Internshala', color: '#10b981' },
-    { icon: '🏆', title: 'Hackathons', desc: 'Live hackathons from Devfolio with themes, dates & registration', color: '#f59e0b' },
-    { icon: '🌍', title: 'Open Source Programs', desc: 'GSoC, LFX Mentorship, Outreachy, MLH Fellowship & more', color: '#ec4899' },
-    { icon: '🤖', title: 'Gemini AI Powered', desc: 'AI career roadmaps, eligibility analysis, and career advisor chatbot', color: '#6366f1' },
+    { icon: '💼', title: 'Real Job Listings', desc: 'Live scraped data from FreeJobAlert, IndGovtJobs, MySarkariNaukri', color: '#4f7df5', href: '/jobs' },
+    { icon: '🏛️', title: 'Government Schemes', desc: 'Scholarships, grants, and welfare schemes from myScheme.gov.in', color: '#8b5cf6', href: '/schemes' },
+    { icon: '🎓', title: 'Internships', desc: '8000+ live internships scraped from Internshala', color: '#10b981', href: '/internships' },
+    { icon: '🏆', title: 'Hackathons', desc: 'Live hackathons from Devfolio with themes, dates & registration', color: '#f59e0b', href: '/hackathons' },
+    { icon: '🌍', title: 'Open Source Programs', desc: 'GSoC, LFX Mentorship, Outreachy, MLH Fellowship & more', color: '#ec4899', href: '/opensource' },
+    { icon: '🤖', title: 'Gemini AI Powered', desc: 'AI career roadmaps, eligibility analysis, and career advisor chatbot', color: '#6366f1', href: '/roadmap' },
   ];
 
   const stats = [
@@ -39,6 +39,9 @@ export default function HomePage() {
             <Link href="/jobs" className="btn-outline" style={{ padding: '14px 32px', fontSize: '1rem' }}>
               Browse Jobs
             </Link>
+            <Link href="/gallery" className="btn-outline" style={{ padding: '14px 32px', fontSize: '1rem' }}>
+              🖼️ Gallery
+            </Link>
           </div>
         </div>
       </section>
@@ -48,25 +51,29 @@ export default function HomePage() {
         <div style={{ maxWidth: 800, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
           {stats.map((s, i) => (
             <div key={i} style={{ textAlign: 'center', padding: 20 }} className="glass-card">
-              <div className="gradient-text" style={{ fontSize: '2rem', fontWeight: 900 }}>{s.number}</div>
+              <div className="gradient-text stat-counter" style={{ fontSize: '2rem', fontWeight: 900 }}>{s.number}</div>
               <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Features */}
+      {/* Features - Now clickable */}
       <section style={{ padding: '40px 24px 80px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <h2 style={{ textAlign: 'center', fontSize: '2rem', fontWeight: 800, marginBottom: 12 }}>Everything You Need</h2>
           <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: 48, fontSize: '1.05rem' }}>Real data. Real opportunities. AI-powered insights.</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
             {features.map((f, i) => (
-              <div key={i} className="glass-card" style={{ padding: 28 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: `${f.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, marginBottom: 16 }}>{f.icon}</div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 8 }}>{f.title}</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>{f.desc}</p>
-              </div>
+              <Link key={i} href={f.href} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div className="glass-card feature-card-hover" style={{ padding: 28, cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: f.color, opacity: 0.6 }} />
+                  <div style={{ width: 48, height: 48, borderRadius: 12, background: `${f.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, marginBottom: 16 }}>{f.icon}</div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 8 }}>{f.title}</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: 12 }}>{f.desc}</p>
+                  <span style={{ fontSize: '0.8rem', color: f.color, fontWeight: 600 }}>Explore →</span>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -91,9 +98,14 @@ export default function HomePage() {
           <p style={{ color: 'var(--text-secondary)', marginBottom: 28, fontSize: '1rem' }}>
             Create your profile and get AI-personalized career recommendations in seconds.
           </p>
-          <Link href="/register" className="btn-gradient" style={{ padding: '14px 36px', fontSize: '1.05rem' }}>
-            Join GrowthGrid — It&apos;s Free →
-          </Link>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link href="/register" className="btn-gradient" style={{ padding: '14px 36px', fontSize: '1.05rem' }}>
+              Join GrowthGrid — It&apos;s Free →
+            </Link>
+            <Link href="/dashboard" className="btn-outline" style={{ padding: '14px 36px', fontSize: '1.05rem' }}>
+              Dashboard
+            </Link>
+          </div>
         </div>
       </section>
     </div>

@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       email,
       password: hashedPassword,
       age: age || null,
-      ageGroup: ageGroup || '18-22',
+      ageGroup: ageGroup || '18-24',
       education: education || '12th',
       stream: stream || 'Other',
       skills: skills || [],

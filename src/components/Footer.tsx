@@ -15,7 +15,7 @@ export default function Footer() {
         </div>
         <div>
           <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: 16, color: 'var(--accent-blue)' }}>Explore</h4>
-          {[['Jobs', '/jobs'], ['Schemes', '/schemes'], ['Internships', '/internships'], ['Hackathons', '/hackathons'], ['Open Source', '/opensource']].map(([label, href]) => (
+          {[['Jobs', '/jobs'], ['Schemes', '/schemes'], ['Internships', '/internships'], ['Hackathons', '/hackathons'], ['Open Source', '/opensource'], ['Gallery', '/gallery'], ['Archives', '/archives']].map(([label, href]) => (
             <Link key={href} href={href} style={{ display: 'block', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.85rem', padding: '4px 0', transition: 'color 0.2s' }}>{label}</Link>
           ))}
         </div>

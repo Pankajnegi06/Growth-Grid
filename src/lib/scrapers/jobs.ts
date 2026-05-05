@@ -1,4 +1,9 @@
-import { fetchPage, cleanText, slugify, delay } from './base';
+import axios from 'axios';
+import https from 'https';
+import { fetchPage, cleanText, slugify, delay, getRandomUA } from './base';
+
+// Reusable HTTPS agent for direct axios calls in this file
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 export interface ScrapedJob {
   title: string;
@@ -96,76 +101,41 @@ export async function scrapeFreeJobAlert(): Promise<ScrapedJob[]> {
   return jobs.slice(0, 40);
 }
 
+// Optimized: only scrape listing page (no detail pages) to stay within Vercel timeout
 export async function scrapeIndGovtJobs(): Promise<ScrapedJob[]> {
   const jobs: ScrapedJob[] = [];
   try {
     const $ = await fetchPage('https://www.indgovtjobs.in');
     
-    const articleLinks: { url: string; title: string }[] = [];
     $('h2 a, h3 a, .post-title a').each((_, el) => {
       const href = $(el).attr('href');
       const text = cleanText($(el).text());
       if (href && text.length > 10 && (text.includes('Recruitment') || text.includes('Vacancy') || text.includes('Jobs') || text.includes('Apply'))) {
-        articleLinks.push({ url: href, title: text });
-      }
-    });
-
-    for (const link of articleLinks.slice(0, 20)) {
-      try {
-        await delay(500);
-        const detail$ = await fetchPage(link.url);
-        
-        let eligibility = '';
-        let importantDates = { notificationDate: '', lastDate: '', examDate: '' };
-        let vacancies = '';
-        
-        detail$('h2, h3').each((_, el) => {
-          const heading = cleanText(detail$(el).text()).toLowerCase();
-          const nextContent = cleanText(detail$(el).nextAll('table, p, div, ul').first().text());
-          
-          if (heading.includes('eligibility') || heading.includes('qualification')) {
-            eligibility = nextContent.substring(0, 500);
-          }
-          if (heading.includes('important dates') || heading.includes('dates')) {
-            const dateText = nextContent;
-            if (dateText.includes('Last')) importantDates.lastDate = dateText.substring(0, 200);
-            else importantDates.notificationDate = dateText.substring(0, 200);
-          }
-          if (heading.includes('vacancy') || heading.includes('list')) {
-            vacancies = nextContent.substring(0, 200);
-          }
-        });
-
-        const applyLink = detail$('a').filter((_, el) => {
-          const t = cleanText(detail$(el).text()).toLowerCase();
-          return t.includes('apply online') || t.includes('click here');
-        }).first().attr('href') || link.url;
-
         jobs.push({
-          title: link.title,
-          organization: link.title.split(' Recruitment')[0] || link.title.split(' ').slice(0, 4).join(' '),
+          title: text,
+          organization: text.split(' Recruitment')[0] || text.split(' ').slice(0, 4).join(' '),
           location: 'India',
           salary: '',
           category: 'General',
           type: 'government',
-          vacancies,
-          description: link.title,
-          eligibility,
-          applicationProcess: `Apply at ${applyLink}`,
-          importantDates,
-          qualificationRequired: eligibility.substring(0, 200),
+          vacancies: '',
+          description: text,
+          eligibility: '',
+          applicationProcess: `Apply at ${href}`,
+          importantDates: { notificationDate: '', lastDate: '', examDate: '' },
+          qualificationRequired: '',
           ageLimit: '',
-          applyLink,
-          sourceUrl: link.url,
+          applyLink: href,
+          sourceUrl: href,
           source: 'indgovtjobs',
-          slug: slugify(link.title + '-igj'),
+          slug: slugify(text + '-igj'),
         });
-      } catch { continue; }
-    }
+      }
+    });
   } catch (error) {
     console.error('IndGovtJobs scraper error:', error);
   }
-  return jobs;
+  return jobs.slice(0, 30);
 }
 
 export async function scrapeMySarkariNaukri(): Promise<ScrapedJob[]> {
@@ -299,83 +269,384 @@ export async function scrapeTimesJobs(): Promise<ScrapedJob[]> {
   return jobs.filter(j => { if (seen.has(j.slug)) return false; seen.add(j.slug); return true; }).slice(0, 40);
 }
 
-// Curated private jobs from 7 portals: Naukri, LinkedIn, Indeed, Upwork, Shine, Monster, Glassdoor
-export function getCuratedPrivateJobs(): ScrapedJob[] {
-  type L = { title: string; org: string; loc: string; sal: string; cat: string; link: string; qual: string; source: string };
-  const listings: L[] = [
-    // Naukri
-    { title: 'Software Developer (Fresher)', org: 'TCS', loc: 'Bangalore, Mumbai, Hyderabad', sal: '₹3.5-7 LPA', cat: 'IT', link: 'https://www.naukri.com/tcs-jobs', qual: 'B.Tech/B.E. CS/IT', source: 'naukri' },
-    { title: 'Associate Software Engineer', org: 'Infosys', loc: 'Multiple Locations', sal: '₹3.6-6 LPA', cat: 'IT', link: 'https://www.naukri.com/infosys-jobs', qual: 'B.Tech/B.E./MCA', source: 'naukri' },
-    { title: 'Data Scientist', org: 'Mu Sigma', loc: 'Bangalore', sal: '₹6-12 LPA', cat: 'Data Analytics', link: 'https://www.naukri.com/mu-sigma-jobs', qual: 'B.Tech/M.Tech with Python/R', source: 'naukri' },
-    { title: 'Finance Manager', org: 'HDFC Bank', loc: 'Mumbai, Delhi, Bangalore', sal: '₹8-16 LPA', cat: 'Finance', link: 'https://www.naukri.com/hdfc-bank-jobs', qual: 'MBA Finance/CA 3+ years', source: 'naukri' },
-    { title: 'Digital Marketing Manager', org: 'Myntra', loc: 'Bangalore', sal: '₹10-18 LPA', cat: 'Marketing', link: 'https://www.naukri.com/myntra-jobs', qual: 'MBA Marketing 4+ years', source: 'naukri' },
-    { title: 'React.js Developer', org: 'Persistent Systems', loc: 'Pune, Nagpur', sal: '₹5-12 LPA', cat: 'IT', link: 'https://www.naukri.com/persistent-systems-jobs', qual: 'B.Tech CS with React, Node.js', source: 'naukri' },
-    { title: 'Python Backend Developer', org: 'Ola Electric', loc: 'Bangalore', sal: '₹12-22 LPA', cat: 'IT', link: 'https://www.naukri.com/ola-jobs', qual: 'B.Tech CS with Python, Django/FastAPI', source: 'naukri' },
-    { title: 'SAP FICO Consultant', org: 'Tech Mahindra', loc: 'Pune, Hyderabad', sal: '₹10-20 LPA', cat: 'IT/ERP', link: 'https://www.naukri.com/tech-mahindra-jobs', qual: 'SAP FICO certified, 3+ years', source: 'naukri' },
-    { title: 'Network Engineer', org: 'Jio (Reliance)', loc: 'Mumbai, Delhi, Chennai', sal: '₹4-9 LPA', cat: 'Telecom', link: 'https://www.naukri.com/reliance-jio-jobs', qual: 'B.Tech ECE/CS with CCNA', source: 'naukri' },
-    { title: 'Operations Executive', org: 'Delhivery', loc: 'Delhi, Mumbai, Hyderabad', sal: '₹3-5 LPA', cat: 'Logistics', link: 'https://www.naukri.com/delhivery-jobs', qual: 'Any Graduate, logistics knowledge', source: 'naukri' },
-    // LinkedIn
-    { title: 'Business Development Manager', org: 'Zomato', loc: 'Delhi, Mumbai, Bangalore', sal: '₹8-15 LPA', cat: 'Sales', link: 'https://www.linkedin.com/jobs/search/?company=Zomato', qual: 'MBA/Graduate with B2B sales', source: 'linkedin' },
-    { title: 'Senior Backend Engineer', org: 'Razorpay', loc: 'Bangalore (Hybrid)', sal: '₹20-38 LPA', cat: 'IT', link: 'https://www.linkedin.com/jobs/search/?company=Razorpay', qual: 'B.Tech CS 4+ years, Java/Go/Python', source: 'linkedin' },
-    { title: 'Product Manager — Consumer', org: 'Swiggy', loc: 'Bangalore', sal: '₹25-50 LPA', cat: 'Product', link: 'https://www.linkedin.com/jobs/search/?company=Swiggy', qual: 'MBA/B.Tech 4+ years consumer PM', source: 'linkedin' },
-    { title: 'Data Engineer', org: 'PhonePe', loc: 'Bangalore', sal: '₹15-28 LPA', cat: 'Data Engineering', link: 'https://www.linkedin.com/jobs/search/?company=PhonePe', qual: 'B.Tech CS with Spark, Kafka, Airflow', source: 'linkedin' },
-    { title: 'Cloud Solutions Architect', org: 'Microsoft India', loc: 'Hyderabad, Bangalore', sal: '₹25-50 LPA', cat: 'IT', link: 'https://www.linkedin.com/jobs/search/?company=Microsoft', qual: 'B.Tech/M.Tech with Azure 5+ years', source: 'linkedin' },
-    { title: 'UI/UX Lead Designer', org: 'CRED', loc: 'Bangalore', sal: '₹18-30 LPA', cat: 'Design', link: 'https://www.linkedin.com/jobs/search/?company=CRED', qual: 'B.Des/B.Tech 5+ years UX, Figma', source: 'linkedin' },
-    { title: 'Machine Learning Engineer', org: 'Flipkart', loc: 'Bangalore', sal: '₹18-35 LPA', cat: 'AI/ML', link: 'https://www.linkedin.com/jobs/search/?company=Flipkart', qual: 'M.Tech/B.Tech CS with ML/Python', source: 'linkedin' },
-    { title: 'Site Reliability Engineer', org: 'Google India', loc: 'Hyderabad, Bangalore', sal: '₹25-55 LPA', cat: 'IT/SRE', link: 'https://www.linkedin.com/jobs/search/?company=Google', qual: 'B.Tech CS with Linux, Kubernetes', source: 'linkedin' },
-    // Indeed India
-    { title: 'Customer Support Executive', org: 'Teleperformance', loc: 'Hyderabad, Pune, Noida', sal: '₹2.5-4.5 LPA', cat: 'Customer Support', link: 'https://in.indeed.com/cmp/Teleperformance', qual: 'Graduate, good communication', source: 'indeed' },
-    { title: 'Accountant / Jr. Accountant', org: 'Tata Motors', loc: 'Pune, Mumbai', sal: '₹3-6 LPA', cat: 'Finance', link: 'https://in.indeed.com/cmp/Tata-Motors', qual: 'B.Com/M.Com with Tally', source: 'indeed' },
-    { title: 'QA Automation Engineer', org: 'Capgemini', loc: 'Mumbai, Pune, Bangalore', sal: '₹4-9 LPA', cat: 'IT', link: 'https://in.indeed.com/cmp/Capgemini', qual: 'B.Tech with Selenium/manual testing', source: 'indeed' },
-    { title: 'Java Developer (3-5 yrs)', org: 'Mphasis', loc: 'Bangalore, Pune', sal: '₹8-16 LPA', cat: 'IT', link: 'https://in.indeed.com/cmp/Mphasis', qual: 'B.Tech CS with Spring Boot, Microservices', source: 'indeed' },
-    { title: 'Graphic Designer', org: 'Ogilvy India', loc: 'Mumbai, Delhi', sal: '₹3.5-7 LPA', cat: 'Design', link: 'https://in.indeed.com/jobs?q=graphic+designer&l=Mumbai', qual: 'B.Des/BFA with Adobe CC', source: 'indeed' },
-    { title: 'Civil Engineer — Site', org: 'L&T Construction', loc: 'Pan India', sal: '₹4-9 LPA', cat: 'Engineering', link: 'https://in.indeed.com/cmp/Larsen-and-Toubro', qual: 'B.E. Civil 2+ years site experience', source: 'indeed' },
-    // Upwork (freelance)
-    { title: 'Freelance Web Developer (React/Next.js)', org: 'Remote Clients', loc: 'Remote / WFH', sal: '$20-60/hr (₹65k-2L/month)', cat: 'IT/Freelance', link: 'https://www.upwork.com/freelance-jobs/web-development/', qual: 'React/Next.js portfolio required', source: 'upwork' },
-    { title: 'Freelance Content Writer (Tech Niche)', org: 'US/UK Clients', loc: 'Remote / WFH', sal: '$10-30/hr (₹33k-1L/month)', cat: 'Content/Freelance', link: 'https://www.upwork.com/freelance-jobs/writing/', qual: 'Strong English, SEO knowledge', source: 'upwork' },
-    { title: 'Freelance Data Analyst (Python/SQL)', org: 'Global Clients', loc: 'Remote / WFH', sal: '$15-40/hr (₹50k-1.3L/month)', cat: 'Data/Freelance', link: 'https://www.upwork.com/freelance-jobs/data-science/', qual: 'Python, SQL, Power BI/Tableau', source: 'upwork' },
-    { title: 'Freelance Graphic Designer (Branding)', org: 'Startups & Agencies', loc: 'Remote / WFH', sal: '$15-50/hr (₹50k-1.7L/month)', cat: 'Design/Freelance', link: 'https://www.upwork.com/freelance-jobs/design/', qual: 'Adobe Illustrator, Photoshop, strong portfolio', source: 'upwork' },
-    { title: 'Freelance Android / Flutter Developer', org: 'International Startups', loc: 'Remote / WFH', sal: '$25-75/hr (₹83k-2.5L/month)', cat: 'Mobile/Freelance', link: 'https://www.upwork.com/freelance-jobs/mobile-development/', qual: 'Flutter/Kotlin, published app portfolio', source: 'upwork' },
-    { title: 'Freelance SEO & Digital Marketing', org: 'E-commerce Clients', loc: 'Remote / WFH', sal: '$10-25/hr (₹33k-83k/month)', cat: 'Marketing/Freelance', link: 'https://www.upwork.com/freelance-jobs/seo/', qual: 'SEO tools (Ahrefs, SEMrush), Google Ads', source: 'upwork' },
-    { title: 'Freelance AI/ML Engineer', org: 'Global Tech Firms', loc: 'Remote / WFH', sal: '$40-100/hr (₹1.3L-3.3L/month)', cat: 'AI/ML Freelance', link: 'https://www.upwork.com/freelance-jobs/machine-learning/', qual: 'TensorFlow/PyTorch, deployed ML models', source: 'upwork' },
-    // Shine.com
-    { title: 'Sales Executive (BFSI)', org: 'HDFC Life Insurance', loc: 'Pan India', sal: '₹2.5-5 LPA + incentives', cat: 'Sales/Insurance', link: 'https://www.shine.com/job-search/insurance-jobs', qual: 'Graduate, good communication, 0-2 years', source: 'shine' },
-    { title: 'BPO / Call Center Executive', org: 'Concentrix', loc: 'Hyderabad, Bangalore, Pune', sal: '₹2.4-4.2 LPA', cat: 'BPO', link: 'https://www.shine.com/job-search/bpo-jobs', qual: 'Graduate/12th pass, spoken English', source: 'shine' },
-    { title: 'Mechanical Engineer (Manufacturing)', org: 'Hero MotoCorp', loc: 'Dharuhera, Gurgaon', sal: '₹4-8 LPA', cat: 'Engineering', link: 'https://www.shine.com/job-search/mechanical-engineer-jobs', qual: 'B.E. Mechanical with manufacturing', source: 'shine' },
-    { title: 'Back Office Executive (Banking)', org: 'Axis Bank', loc: 'Delhi, Mumbai, Chennai', sal: '₹2.5-4 LPA', cat: 'Banking', link: 'https://www.shine.com/job-search/back-office-jobs-in-banks', qual: 'Graduate, data entry, MS Office', source: 'shine' },
-    { title: 'Technical Support Engineer (L2)', org: 'Microland', loc: 'Bangalore, Hyderabad', sal: '₹4-8 LPA', cat: 'IT Support', link: 'https://www.shine.com/job-search/technical-support-engineer-jobs', qual: 'B.Tech/BCA with networking, ITIL knowledge', source: 'shine' },
-    // Monster India
-    { title: 'Embedded Systems Engineer', org: 'Qualcomm India', loc: 'Hyderabad, Bangalore', sal: '₹12-25 LPA', cat: 'Hardware/IT', link: 'https://india.monsterindia.com/srp/results.m?q=embedded+systems', qual: 'B.Tech/M.Tech ECE with C/C++, RTOS', source: 'monster' },
-    { title: 'Cybersecurity Analyst', org: 'IBM India', loc: 'Bangalore, Pune, Delhi', sal: '₹8-18 LPA', cat: 'Security/IT', link: 'https://india.monsterindia.com/srp/results.m?q=cybersecurity', qual: 'B.Tech CS with CEH/CISSP, 2+ years', source: 'monster' },
-    { title: 'Supply Chain Analyst', org: 'Marico', loc: 'Mumbai', sal: '₹6-11 LPA', cat: 'Supply Chain', link: 'https://india.monsterindia.com/srp/results.m?q=supply+chain+analyst', qual: 'MBA Operations/Supply Chain, 2+ years', source: 'monster' },
-    { title: 'Power BI / Tableau Developer', org: 'Genpact', loc: 'Hyderabad, Gurugram', sal: '₹6-13 LPA', cat: 'Data Analytics', link: 'https://india.monsterindia.com/srp/results.m?q=power+bi', qual: 'B.Tech/BCA with Power BI, DAX, SQL', source: 'monster' },
-    { title: 'Pharmaceutical Sales Officer', org: 'Sun Pharma', loc: 'Pan India', sal: '₹3-6 LPA + TA', cat: 'Pharma/Sales', link: 'https://india.monsterindia.com/srp/results.m?q=pharma+sales', qual: 'B.Pharm/B.Sc 1+ years field sales', source: 'monster' },
-    { title: 'Cloud & DevOps Engineer', org: 'HCL Technologies', loc: 'Noida, Chennai, Pune', sal: '₹6-14 LPA', cat: 'IT', link: 'https://india.monsterindia.com/company/hcl-technologies', qual: 'B.Tech CS/IT with AWS/Azure/DevOps', source: 'monster' },
-    // Glassdoor
-    { title: 'Investment Banking Analyst', org: 'Goldman Sachs India', loc: 'Bangalore, Mumbai', sal: '₹15-30 LPA', cat: 'Finance', link: 'https://www.glassdoor.co.in/Jobs/Goldman-Sachs-Jobs-EI_IE2482.0,12_IN115.htm', qual: 'MBA Finance / CA from top inst', source: 'glassdoor' },
-    { title: 'Game Developer (Unity 3D)', org: 'Ubisoft India', loc: 'Pune (Hybrid)', sal: '₹10-22 LPA', cat: 'Gaming/IT', link: 'https://www.glassdoor.co.in/Jobs/Ubisoft-India-Jobs-EI_IE6736.0,6_IL.7,12_IN115.htm', qual: 'B.Tech CS with Unity/C#, game portfolio', source: 'glassdoor' },
-    { title: 'Research Scientist — NLP/AI', org: 'Samsung R&D India', loc: 'Bangalore, Noida', sal: '₹18-35 LPA', cat: 'AI/ML Research', link: 'https://www.glassdoor.co.in/Jobs/Samsung-Research-India-Jobs-EI_IE8889.0,20_IN115.htm', qual: 'M.Tech/PhD CS with NLP, deep learning', source: 'glassdoor' },
-    { title: 'Full Stack Developer (MERN)', org: 'Zepto', loc: 'Mumbai, Bangalore', sal: '₹15-28 LPA', cat: 'IT', link: 'https://www.glassdoor.co.in/Jobs/Zepto-Jobs-EI_IE4261649.0,5_IN115.htm', qual: 'B.Tech CS with MongoDB, Express, React, Node.js', source: 'glassdoor' },
-    { title: 'Management Consultant', org: 'McKinsey India', loc: 'Gurugram, Mumbai', sal: '₹18-35 LPA', cat: 'Consulting', link: 'https://www.glassdoor.co.in/Jobs/McKinsey-and-Company-India-Jobs-EI_IE2893.0,26_IN115.htm', qual: 'MBA/MS from IITs/IIMs, analytics skills', source: 'glassdoor' },
-    { title: 'Product Analyst — Growth', org: 'Naukri.com (Info Edge)', loc: 'Noida, Delhi', sal: '₹8-15 LPA', cat: 'Product/Analytics', link: 'https://www.glassdoor.co.in/Jobs/Info-Edge-Jobs-EI_IE240625.0,9_IN115.htm', qual: 'B.Tech/MBA with SQL, product analytics, A/B testing', source: 'glassdoor' },
+/**
+ * Fetch live remote/private jobs from RemoteOK API (free, no key needed).
+ * Replaces the old hardcoded getCuratedPrivateJobs().
+ */
+export async function fetchRemoteOKJobs(): Promise<ScrapedJob[]> {
+  const jobs: ScrapedJob[] = [];
+  try {
+    const { data } = await axios.get('https://remoteok.com/api', {
+      headers: {
+        'User-Agent': getRandomUA(),
+        'Accept': 'application/json',
+      },
+      timeout: 8000,
+      httpsAgent,
+    });
+
+    const listings = Array.isArray(data) ? data.slice(1) : []; // first element is metadata
+    for (const item of listings.slice(0, 50)) {
+      if (!item.position || !item.company) continue;
+
+      const tags = Array.isArray(item.tags) ? item.tags : [];
+      const salaryStr = item.salary_min && item.salary_max
+        ? `$${Number(item.salary_min).toLocaleString()}-$${Number(item.salary_max).toLocaleString()}/yr`
+        : 'Competitive';
+      const postedDate = item.date ? new Date(item.date).toLocaleDateString('en-IN') : '';
+
+      jobs.push({
+        title: item.position,
+        organization: item.company,
+        location: item.location || 'Remote / WFH',
+        salary: salaryStr,
+        category: tags.slice(0, 2).join(', ') || 'IT/Remote',
+        type: 'private',
+        vacancies: '',
+        description: item.description
+          ? cleanText(item.description.replace(/<[^>]*>/g, '')).substring(0, 300)
+          : `${item.position} at ${item.company}`,
+        eligibility: tags.join(', ') || 'As per requirements',
+        applicationProcess: `Apply at ${item.url || 'https://remoteok.com'}`,
+        importantDates: {
+          notificationDate: postedDate,
+          lastDate: 'Rolling',
+          examDate: '',
+        },
+        qualificationRequired: tags.join(', ') || 'Relevant experience',
+        ageLimit: '',
+        applyLink: item.url || 'https://remoteok.com',
+        sourceUrl: item.url || 'https://remoteok.com',
+        source: 'remoteok',
+        slug: slugify(item.position + '-' + item.company + '-rok'),
+      });
+    }
+  } catch (error) {
+    console.error('RemoteOK API error:', error);
+  }
+  return jobs;
+}
+
+/**
+ * Fetch live jobs from Jobicy API (free, no key needed, remote-friendly).
+ */
+export async function fetchJobicyJobs(): Promise<ScrapedJob[]> {
+  const jobs: ScrapedJob[] = [];
+  try {
+    const { data } = await axios.get('https://jobicy.com/api/v2/remote-jobs?count=50', {
+      headers: { 'User-Agent': getRandomUA() },
+      timeout: 8000,
+      httpsAgent,
+    });
+
+    const listings = data?.jobs || [];
+    for (const item of listings) {
+      if (!item.jobTitle || !item.companyName) continue;
+
+      jobs.push({
+        title: item.jobTitle,
+        organization: item.companyName,
+        location: item.jobGeo || 'Remote',
+        salary: item.annualSalaryMin && item.annualSalaryMax
+          ? `$${item.annualSalaryMin}-$${item.annualSalaryMax}/yr`
+          : 'Competitive',
+        category: item.jobIndustry?.[0] || 'IT/Remote',
+        type: 'private',
+        vacancies: '',
+        description: item.jobExcerpt || item.jobTitle,
+        eligibility: item.jobLevel || 'As per requirements',
+        applicationProcess: `Apply at ${item.url}`,
+        importantDates: {
+          notificationDate: item.pubDate ? new Date(item.pubDate).toLocaleDateString('en-IN') : '',
+          lastDate: 'Rolling',
+          examDate: '',
+        },
+        qualificationRequired: item.jobLevel || 'Relevant experience',
+        ageLimit: '',
+        applyLink: item.url || 'https://jobicy.com',
+        sourceUrl: item.url || 'https://jobicy.com',
+        source: 'jobicy',
+        slug: slugify(item.jobTitle + '-' + item.companyName + '-jby'),
+      });
+    }
+  } catch (error) {
+    console.error('Jobicy API error:', error);
+  }
+  return jobs;
+}
+
+/**
+ * Fetch India-specific private jobs from JSearch API (RapidAPI).
+ * Aggregates from LinkedIn, Indeed, Glassdoor, and other major job boards.
+ * Free tier: 500 requests/month — we rotate queries to maximize variety.
+ */
+export async function fetchJSearchJobs(): Promise<ScrapedJob[]> {
+  const apiKey = process.env.RAPIDAPI_KEY;
+  if (!apiKey) {
+    console.warn('RAPIDAPI_KEY not set, skipping JSearch');
+    return [];
+  }
+
+  const jobs: ScrapedJob[] = [];
+
+  // Rotate query based on hour-of-day so each refresh fetches different roles
+  const queries = [
+    'software developer India',
+    'data analyst India',
+    'web developer India',
+    'frontend developer India',
+    'backend developer India',
+    'full stack developer India',
+    'python developer India',
+    'java developer India',
+    'devops engineer India',
+    'cloud engineer India',
+    'machine learning India',
+    'business analyst India',
+    'product manager India',
+    'UI UX designer India',
+    'marketing manager India',
+    'finance analyst India',
+    'cyber security India',
+    'mobile developer India',
+    'react developer India',
+    'node js developer India',
+    'fresher engineer India',
+    'graduate trainee India',
+    'management trainee India',
+    'digital marketing India',
+  ];
+  const queryIndex = new Date().getHours() % queries.length;
+  const query = queries[queryIndex];
+
+  try {
+    const { data } = await axios.get('https://jsearch.p.rapidapi.com/search', {
+      params: {
+        query,
+        page: '1',
+        num_pages: '1',
+        country: 'in',
+        date_posted: 'week',
+      },
+      headers: {
+        'X-RapidAPI-Key': apiKey,
+        'X-RapidAPI-Host': 'jsearch.p.rapidapi.com',
+      },
+      timeout: 10000,
+      httpsAgent,
+    });
+
+    const listings = data?.data || [];
+    for (const item of listings) {
+      if (!item.job_title || !item.employer_name) continue;
+
+      const salaryMin = item.job_min_salary;
+      const salaryMax = item.job_max_salary;
+      const salaryCurrency = item.job_salary_currency || '₹';
+      const salaryPeriod = item.job_salary_period || 'YEAR';
+      let salaryStr = '';
+      if (salaryMin && salaryMax) {
+        const periodLabel = salaryPeriod === 'YEAR' ? '/yr' : salaryPeriod === 'MONTH' ? '/mo' : '';
+        salaryStr = `${salaryCurrency}${Number(salaryMin).toLocaleString('en-IN')}-${Number(salaryMax).toLocaleString('en-IN')}${periodLabel}`;
+      } else if (salaryMin) {
+        salaryStr = `${salaryCurrency}${Number(salaryMin).toLocaleString('en-IN')}+`;
+      }
+
+      const city = item.job_city || '';
+      const state = item.job_state || '';
+      const location = [city, state, item.job_country || 'India'].filter(Boolean).join(', ');
+
+      const postedDate = item.job_posted_at_datetime_utc
+        ? new Date(item.job_posted_at_datetime_utc).toLocaleDateString('en-IN')
+        : '';
+
+      const qualifications = (item.job_required_education?.degree || '');
+      const experience = item.job_required_experience?.required_experience_in_months
+        ? `${Math.round(item.job_required_experience.required_experience_in_months / 12)} years`
+        : item.job_experience_in_place_of_education ? 'Experience accepted' : '';
+
+      const publisher = item.job_publisher || 'JSearch';
+
+      jobs.push({
+        title: item.job_title,
+        organization: item.employer_name,
+        location,
+        salary: salaryStr || 'Competitive',
+        category: item.job_employment_type === 'INTERN' ? 'Internship' : 'IT',
+        type: 'private',
+        vacancies: '',
+        description: item.job_description
+          ? cleanText(item.job_description.replace(/<[^>]*>/g, '')).substring(0, 300)
+          : `${item.job_title} at ${item.employer_name}`,
+        eligibility: [qualifications, experience].filter(Boolean).join(', ') || 'As per requirements',
+        applicationProcess: `Apply at ${item.job_apply_link || item.job_google_link || ''}`,
+        importantDates: {
+          notificationDate: postedDate,
+          lastDate: item.job_offer_expiration_datetime_utc
+            ? new Date(item.job_offer_expiration_datetime_utc).toLocaleDateString('en-IN')
+            : 'Rolling',
+          examDate: '',
+        },
+        qualificationRequired: qualifications || 'Graduate',
+        ageLimit: '',
+        applyLink: item.job_apply_link || item.job_google_link || '',
+        sourceUrl: item.job_apply_link || item.job_google_link || '',
+        source: `jsearch-${publisher.toLowerCase().replace(/\s+/g, '')}`,
+        slug: slugify(item.job_title + '-' + item.employer_name + '-js'),
+      });
+    }
+
+    console.log(`✅ JSearch: fetched ${jobs.length} jobs for "${query}"`);
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error('JSearch API error:', errMsg);
+  }
+  return jobs;
+}
+
+/**
+ * Scrape Indian private jobs from Naukri.com listing pages.
+ * Fallback for when RapidAPI/JSearch is not working.
+ */
+export async function scrapeNaukriIndia(): Promise<ScrapedJob[]> {
+  const jobs: ScrapedJob[] = [];
+  const searches = [
+    { url: 'https://www.naukri.com/software-developer-jobs', cat: 'Software Developer' },
+    { url: 'https://www.naukri.com/data-analyst-jobs', cat: 'Data Analyst' },
+    { url: 'https://www.naukri.com/web-developer-jobs', cat: 'Web Developer' },
+    { url: 'https://www.naukri.com/fresher-jobs', cat: 'Freshers' },
   ];
 
-  const portals: Record<string, string> = {
-    naukri: 'https://www.naukri.com', linkedin: 'https://www.linkedin.com/jobs',
-    indeed: 'https://in.indeed.com', upwork: 'https://www.upwork.com',
-    shine: 'https://www.shine.com', monster: 'https://india.monsterindia.com',
-    glassdoor: 'https://www.glassdoor.co.in',
-  };
+  for (const { url, cat } of searches) {
+    try {
+      await delay(600);
+      const $ = await fetchPage(url);
 
-  return listings.map(c => ({
-    title: c.title, organization: c.org, location: c.loc, salary: c.sal,
-    category: c.cat, type: 'private' as const, vacancies: 'Multiple openings',
-    description: c.title + ' at ' + c.org + '. Salary: ' + c.sal + '. ' + c.loc + '. Required: ' + c.qual,
-    eligibility: c.qual,
-    applicationProcess: 'Apply at ' + c.link,
-    importantDates: { notificationDate: '', lastDate: 'Rolling', examDate: '' },
-    qualificationRequired: c.qual, ageLimit: 'As per company policy',
-    applyLink: c.link, sourceUrl: portals[c.source] || c.link,
-    source: c.source, slug: slugify(c.title + '-' + c.org + '-' + c.source),
-  }));
+      // Naukri job cards
+      $('article.jobTuple, .cust-job-tuple, .srp-jobtuple-wrapper, [data-job-id]').each((_, el) => {
+        const titleEl = $(el).find('a.title, .title a, h2 a, .row1 a').first();
+        const title = cleanText(titleEl.text());
+        const href = titleEl.attr('href') || '';
+        if (!title || title.length < 5) return;
+
+        const company = cleanText($(el).find('.comp-name, .subTitle a, .companyInfo a').first().text());
+        const exp = cleanText($(el).find('.exp, .expwdth, [class*="experience"]').first().text());
+        const salary = cleanText($(el).find('.sal, .ni-job-tuple-icon-srp-rupee, [class*="salary"]').first().text());
+        const location = cleanText($(el).find('.loc, .locWdth, [class*="location"]').first().text());
+
+        const fullUrl = href.startsWith('http') ? href : `https://www.naukri.com${href}`;
+
+        jobs.push({
+          title,
+          organization: company || 'Various Companies',
+          location: location || 'India',
+          salary: salary || 'Competitive',
+          category: cat,
+          type: 'private',
+          vacancies: '',
+          description: `${title} at ${company || 'a reputed company'}. ${exp ? 'Exp: ' + exp : ''}`,
+          eligibility: exp || 'As per requirements',
+          applicationProcess: `Apply at ${fullUrl}`,
+          importantDates: { notificationDate: '', lastDate: 'Rolling', examDate: '' },
+          qualificationRequired: 'Graduate / B.Tech',
+          ageLimit: '',
+          applyLink: fullUrl,
+          sourceUrl: fullUrl,
+          source: 'naukri_india',
+          slug: slugify(title + '-' + (company || '').substring(0, 15) + '-nkr'),
+        });
+      });
+
+      // Fallback: scrape any job links on page
+      if (jobs.length === 0) {
+        $('a[href*="naukri.com/job-listings"]').each((_, el) => {
+          const text = cleanText($(el).text());
+          const href = $(el).attr('href') || '';
+          if (text.length > 10 && text.length < 150) {
+            jobs.push({
+              title: text,
+              organization: '',
+              location: 'India',
+              salary: 'Competitive',
+              category: cat,
+              type: 'private',
+              vacancies: '',
+              description: text,
+              eligibility: 'As per requirements',
+              applicationProcess: `Apply at ${href}`,
+              importantDates: { notificationDate: '', lastDate: 'Rolling', examDate: '' },
+              qualificationRequired: 'Graduate',
+              ageLimit: '',
+              applyLink: href,
+              sourceUrl: href,
+              source: 'naukri_india',
+              slug: slugify(text + '-nkr'),
+            });
+          }
+        });
+      }
+    } catch (err) {
+      console.error(`Naukri India error for ${cat}:`, err);
+    }
+  }
+
+  const seen = new Set<string>();
+  return jobs.filter(j => { if (seen.has(j.slug)) return false; seen.add(j.slug); return true; }).slice(0, 50);
+}
+
+/**
+ * Scrape Indian private jobs from Shine.com listing pages.
+ */
+export async function scrapeShineIndia(): Promise<ScrapedJob[]> {
+  const jobs: ScrapedJob[] = [];
+  const searches = [
+    { url: 'https://www.shine.com/job-search/software-developer-jobs', cat: 'Software Developer' },
+    { url: 'https://www.shine.com/job-search/data-analyst-jobs', cat: 'Data Analyst' },
+    { url: 'https://www.shine.com/job-search/fresher-jobs', cat: 'Freshers' },
+  ];
+
+  for (const { url, cat } of searches) {
+    try {
+      await delay(600);
+      const $ = await fetchPage(url);
+
+      $('a[href*="/job/"]').each((_, el) => {
+        const text = cleanText($(el).text());
+        const href = $(el).attr('href') || '';
+        if (text.length < 8 || text.length > 150) return;
+
+        const container = $(el).closest('div, li, article');
+        const company = cleanText(container.find('[class*="company"], .compName').first().text());
+        const location = cleanText(container.find('[class*="loc"]').first().text());
+        const experience = cleanText(container.find('[class*="exp"]').first().text());
+
+        const fullUrl = href.startsWith('http') ? href : `https://www.shine.com${href}`;
+
+        jobs.push({
+          title: text,
+          organization: company || 'Various Companies',
+          location: location || 'India',
+          salary: 'Competitive',
+          category: cat,
+          type: 'private',
+          vacancies: '',
+          description: `${text} at ${company || 'a reputed company'}. ${experience ? 'Exp: ' + experience : ''}`,
+          eligibility: experience || 'As per requirements',
+          applicationProcess: `Apply at ${fullUrl}`,
+          importantDates: { notificationDate: '', lastDate: 'Rolling', examDate: '' },
+          qualificationRequired: 'Graduate / B.Tech',
+          ageLimit: '',
+          applyLink: fullUrl,
+          sourceUrl: fullUrl,
+          source: 'shine_india',
+          slug: slugify(text + '-' + (company || '').substring(0, 15) + '-shn'),
+        });
+      });
+    } catch (err) {
+      console.error(`Shine India error for ${cat}:`, err);
+    }
+  }
+
+  const seen = new Set<string>();
+  return jobs.filter(j => { if (seen.has(j.slug)) return false; seen.add(j.slug); return true; }).slice(0, 40);
 }

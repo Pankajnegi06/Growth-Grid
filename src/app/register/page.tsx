@@ -6,7 +6,7 @@ import Link from 'next/link';
 export default function RegisterPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ name: '', email: '', password: '', age: '', ageGroup: '18-22', education: '12th', stream: 'Other', skills: '', interests: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', age: '', ageGroup: '18-24', education: '12th', stream: 'Other', skills: '', interests: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -90,7 +90,7 @@ export default function RegisterPage() {
                 <div>
                   <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Age Group</label>
                   <select className="input-field" value={form.ageGroup} onChange={e => setForm({ ...form, ageGroup: e.target.value })}>
-                    <option value="15-18">15-18</option><option value="18-22">18-22</option><option value="22-25">22-25</option><option value="25+">25+</option>
+                    <option value="1-18">1-18</option><option value="18-24">18-24</option><option value="25-40">25-40</option><option value="40+">40+</option>
                   </select>
                 </div>
                 <div>

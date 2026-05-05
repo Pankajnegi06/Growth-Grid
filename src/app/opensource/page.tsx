@@ -3,16 +3,26 @@ import { useEffect, useState } from 'react';
 
 interface OSProgram { _id: string; title: string; organization: string; program: string; techStack: string[]; description: string; stipend: string; timeline: string; applyLink: string; }
 
+function formatTimeAgo(d: string | null): string {
+  if (!d) return '';
+  const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
+  if (m < 1) return 'Just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
+}
+
 export default function OpenSourcePage() {
   const [items, setItems] = useState<OSProgram[]>([]);
   const [loading, setLoading] = useState(true);
   const [program, setProgram] = useState('');
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
     if (program) params.set('program', program);
-    fetch(`/api/opensource?${params}`).then(r => r.json()).then(d => { setItems(d.programs || []); setLoading(false); }).catch(() => setLoading(false));
+    fetch(`/api/opensource?${params}&_t=${Date.now()}`).then(r => r.json()).then(d => { setItems(d.programs || []); setLastUpdated(d.lastUpdated || null); setLoading(false); }).catch(() => setLoading(false));
   }, [program]);
 
   const progColors: Record<string, string> = { GSoC: '#4f7df5', LFX: '#10b981', Outreachy: '#ec4899', Other: '#f59e0b' };
@@ -20,7 +30,11 @@ export default function OpenSourcePage() {
   return (
     <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px' }}>
       <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: 8 }}>🌍 Open Source Programs</h1>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>GSoC, LFX Mentorship, Outreachy, MLH, GSSoC, and more — real stipends & mentorship</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+        <p style={{ color: 'var(--text-secondary)', margin: 0 }}>GSoC, LFX, Outreachy, MLH + live GitHub repos with good-first-issues</p>
+        {lastUpdated && <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '3px 10px', borderRadius: 6, background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>🔄 Updated {formatTimeAgo(lastUpdated)}</span>}
+        {loading && <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '3px 10px', borderRadius: 6, background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}>⏳ Refreshing...</span>}
+      </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
         {['', 'GSoC', 'LFX', 'Outreachy', 'Other'].map(p => (
